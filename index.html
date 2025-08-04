@@ -1,6 +1,3 @@
-
-<P>Each color you paint it will interact with a unique contract.</P>
-<P>100 COLORS = 100 CCONTRACTS</P>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -55,6 +52,66 @@
       cursor: not-allowed;
       opacity: 0.6;
     }
+
+    /* Mobile styles: hide desktop color picker, show button */
+    @media (max-width: 600px) {
+      #colorPicker { display: none !important; }
+      #mobileColorPickerBtn { display: inline-block !important; }
+    }
+    @media (min-width: 601px) {
+      #mobileColorPickerBtn { display: none !important; }
+    }
+
+    /* Modal styles */
+    #colorPickerModal {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0; top: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.65);
+      justify-content: center;
+      align-items: center;
+    }
+    #colorPickerModalContent {
+      background: #222;
+      padding: 18px;
+      border-radius: 10px;
+      box-shadow: 0 2px 20px #000;
+      max-width: 95vw;
+      min-width: 320px;
+      max-height: 90vh;
+      overflow: auto;
+      position: relative;
+    }
+    #modalCloseBtn {
+      position: absolute;
+      top: 8px; right: 14px;
+      background: #ffd600;
+      color: #222;
+      border: none;
+      font-size: 18px;
+      border-radius: 50%;
+      width: 35px; height: 35px;
+      cursor: pointer;
+      z-index: 1;
+    }
+    #colorPickerGrid {
+      display: grid;
+      grid-template-columns: repeat(10, 28px);
+      gap: 7px;
+      justify-content: center;
+      margin-top: 18px;
+    }
+    .modal-color-box {
+      width: 28px;
+      height: 28px;
+      border: 2px solid white;
+      cursor: pointer;
+    }
+    .modal-color-box.selected {
+      border: 3px solid gold;
+    }
   </style>
 </head>
 <body>
@@ -65,6 +122,14 @@
 
   <h3>Select a Color</h3>
   <div id="colorPicker"></div>
+  <button id="mobileColorPickerBtn" style="display:none;">Choose Color</button>
+  <div id="colorPickerModal">
+    <div id="colorPickerModalContent">
+      <button id="modalCloseBtn">&times;</button>
+      <h3 style="margin-top:0;">Pick a Color</h3>
+      <div id="colorPickerGrid"></div>
+    </div>
+  </div>
 
   <h3>16 × 16 Pixel Grid</h3>
   <div id="grid"></div>
@@ -101,6 +166,7 @@
       "type":"function"
     }
   ];
+
     const deployedColors = [
     {"color":"Red","address":"0x070e17528afE2acd682a6931De8D854c6eB7dfa7"},
     {"color":"Green","address":"0x58Dd54a5FeCE682eEB4B84710997ca8c9B46f540"},
@@ -219,6 +285,10 @@
     const walletAddressP = document.getElementById('walletAddress');
     const connectBtn = document.getElementById('connectBtn');
     const disconnectBtn = document.getElementById('disconnectBtn');
+    const mobileColorPickerBtn = document.getElementById('mobileColorPickerBtn');
+    const colorPickerModal = document.getElementById('colorPickerModal');
+    const colorPickerGrid = document.getElementById('colorPickerGrid');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
 
     async function initContracts() {
       contracts = deployedColors.map(dc => new ethers.Contract(dc.address, paintABI, signer));
@@ -274,7 +344,6 @@
         signer = await provider.getSigner();
         userAddress = await signer.getAddress();
 
-        // ✅ Show shortened address (first 5 + last 5)
         walletAddressP.textContent = 'Connected: ' + userAddress.slice(0, 5) + '...' + userAddress.slice(-5);
         connectBtn.textContent = 'Wallet Connected';
         connectBtn.disabled = true;
@@ -310,6 +379,27 @@
           div.classList.add('selected');
         };
         colorPicker.appendChild(div);
+      });
+    }
+
+    // Modal color picker for mobile
+    function buildColorPickerModal() {
+      colorPickerGrid.innerHTML = '';
+      deployedColors.forEach((dc, i) => {
+        const div = document.createElement('div');
+        div.className = 'modal-color-box';
+        div.style.backgroundColor = normalizeColorName(dc.color);
+        div.title = dc.color;
+        if (i === selectedColorIndex) div.classList.add('selected');
+        div.onclick = () => {
+          selectedColorIndex = i;
+          document.querySelectorAll('.modal-color-box').forEach(el => el.classList.remove('selected'));
+          div.classList.add('selected');
+          colorPickerModal.style.display = 'none';
+          document.querySelectorAll('.color-box').forEach(el => el.classList.remove('selected'));
+          if (colorPicker.children[i]) colorPicker.children[i].classList.add('selected');
+        };
+        colorPickerGrid.appendChild(div);
       });
     }
 
@@ -353,6 +443,18 @@
       }
     }
 
+    // Modal open/close logic
+    mobileColorPickerBtn.onclick = () => {
+      buildColorPickerModal();
+      colorPickerModal.style.display = 'flex';
+    };
+    modalCloseBtn.onclick = () => {
+      colorPickerModal.style.display = 'none';
+    };
+    colorPickerModal.onclick = (e) => {
+      if (e.target === colorPickerModal) colorPickerModal.style.display = 'none';
+    };
+
     connectBtn.onclick = connectWallet;
     disconnectBtn.onclick = disconnectWallet;
 
@@ -361,5 +463,3 @@
   </script>
 </body>
 </html>
-
-
