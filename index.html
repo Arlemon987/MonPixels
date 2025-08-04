@@ -1,77 +1,76 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>Monad Paint DApp</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<style>
-  body {
-    font-family: sans-serif;
-    background: #111;
-    color: white;
-    text-align: center;
-  }
-  #connectBtn, #disconnectBtn {
-    margin: 20px 5px 20px 5px;
-    padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
-  }
-  #colorPicker {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 6px;
-    margin: 20px;
-  }
-  .color-box {
-    width: 24px;
-    height: 24px;
-    border: 2px solid white;
-    cursor: pointer;
-  }
-  .selected {
-    border: 3px solid gold;
-  }
-  #grid {
-    display: grid;
-    grid-template-columns: repeat(16, 20px);
-    gap: 2px;
-    justify-content: center;
-    margin-top: 30px;
-  }
-  .pixel {
-    width: 20px;
-    height: 20px;
-    background: #222;
-    border: 1px solid #333;
-    cursor: pointer;
-    user-select: none;
-  }
-  .pixel.disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <title>Monad Paint DApp</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #111;
+      color: white;
+      text-align: center;
+    }
+    #connectBtn, #disconnectBtn {
+      margin: 20px 5px 20px 5px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #colorPicker {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+      margin: 20px;
+    }
+    .color-box {
+      width: 24px;
+      height: 24px;
+      border: 2px solid white;
+      cursor: pointer;
+    }
+    .selected {
+      border: 3px solid gold;
+    }
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(16, 20px);
+      gap: 2px;
+      justify-content: center;
+      margin-top: 30px;
+    }
+    .pixel {
+      width: 20px;
+      height: 20px;
+      background: #222;
+      border: 1px solid #333;
+      cursor: pointer;
+      user-select: none;
+    }
+    .pixel.disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+  </style>
 </head>
 <body>
-<h1>Monad Paint 🎨</h1>
-<button id="connectBtn">Connect Wallet</button>
-<button id="disconnectBtn" style="display:none;">Disconnect Wallet</button>
-<p id="walletAddress">Wallet not connected</p>
+  <h1>Monad Paint 🎨</h1>
+  <button id="connectBtn">Connect Wallet</button>
+  <button id="disconnectBtn" style="display:none;">Disconnect Wallet</button>
+  <p id="walletAddress">Wallet not connected</p>
 
-<h3>Select a Color</h3>
-<div id="colorPicker"></div>
+  <h3>Select a Color</h3>
+  <div id="colorPicker"></div>
 
-<h3>16 × 16 Pixel Grid</h3>
-<div id="grid"></div>
+  <h3>16 × 16 Pixel Grid</h3>
+  <div id="grid"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/ethers@6.6.2/dist/ethers.umd.min.js"></script>
-<script>
-  const { ethers } = window.ethers;
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.2/dist/ethers.umd.min.js"></script>
+  <script>
+    const { ethers } = window.ethers;
 
-  // Monad Paint ABI
-  const paintABI = [
+    const paintABI =  [
     {
       "inputs": [{"internalType":"string","name":"_color","type":"string"}],
       "stateMutability":"nonpayable",
@@ -98,11 +97,8 @@
       "stateMutability":"view",
       "type":"function"
     }
-  ]
-
-
-  // Your 100 deployed color contracts (truncated here for brevity, replace with your full list)
-  const deployedColors = [
+  ];
+    const deployedColors = [
     {"color":"Red","address":"0x070e17528afE2acd682a6931De8D854c6eB7dfa7"},
     {"color":"Green","address":"0x58Dd54a5FeCE682eEB4B84710997ca8c9B46f540"},
     {"color":"Blue","address":"0x0441178a70Fe2069c239536b99dF3c6afc6f1A89"},
@@ -205,176 +201,160 @@
     {"color":"HoneyDew","address":"0x8086Aa5cF1D6f448f36bcC01C32Cf402E6190dc0"}
   ];
 
-  function normalizeColorName(name) {
-    // Lowercase and remove spaces for CSS safe colors if needed
-    return name.toLowerCase();
-  }
+    function normalizeColorName(name) {
+      return name.toLowerCase();
+    }
 
-  let provider;
-  let signer;
-  let userAddress = null;
-  let selectedColorIndex = 0;
-  let contracts = [];
-  const grid = document.getElementById('grid');
-  const colorPicker = document.getElementById('colorPicker');
-  const walletAddressP = document.getElementById('walletAddress');
-  const connectBtn = document.getElementById('connectBtn');
-  const disconnectBtn = document.getElementById('disconnectBtn');
+    let provider;
+    let signer;
+    let userAddress = null;
+    let selectedColorIndex = 0;
+    let contracts = [];
 
-  // Initialize contract instances for all deployed colors
-  async function initContracts() {
-    contracts = deployedColors.map(dc => new ethers.Contract(dc.address, paintABI, signer));
-  }
+    const grid = document.getElementById('grid');
+    const colorPicker = document.getElementById('colorPicker');
+    const walletAddressP = document.getElementById('walletAddress');
+    const connectBtn = document.getElementById('connectBtn');
+    const disconnectBtn = document.getElementById('disconnectBtn');
 
-  // Force switch to Monad Testnet (chainId = 10143 decimal = 0x279f)
-  async function switchToMonadTestnet() {
-    const chainIdHex = '0x279f'; // 10143 decimal in hex
-    try {
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: chainIdHex }]
-      });
-      return true;
-    } catch (switchError) {
-      // This error code means the chain is not added to MetaMask
-      if (switchError.code === 4902) {
-        try {
-          await window.ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [{
-              chainId: chainIdHex,
-              chainName: 'Monad Testnet',
-              nativeCurrency: {
-                name: 'MON',
-                symbol: 'MON',
-                decimals: 18
-              },
-              rpcUrls: ['https://testnet-rpc.monad.xyz'],
-              blockExplorerUrls: ['https://testnet.monadexplorer.com']
-            }]
-          });
-          return true;
-        } catch (addError) {
-          alert('Failed to add Monad Testnet: ' + addError.message);
+    async function initContracts() {
+      contracts = deployedColors.map(dc => new ethers.Contract(dc.address, paintABI, signer));
+    }
+
+    async function switchToMonadTestnet() {
+      const chainIdHex = '0x279f'; // Monad Testnet
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: chainIdHex }]
+        });
+        return true;
+      } catch (switchError) {
+        if (switchError.code === 4902) {
+          try {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: chainIdHex,
+                chainName: 'Monad Testnet',
+                nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
+                rpcUrls: ['https://testnet-rpc.monad.xyz'],
+                blockExplorerUrls: ['https://testnet.monadexplorer.com']
+              }]
+            });
+            return true;
+          } catch (addError) {
+            alert('Failed to add Monad Testnet: ' + addError.message);
+            return false;
+          }
+        } else {
+          alert('Failed to switch network: ' + switchError.message);
           return false;
         }
-      } else {
-        alert('Failed to switch network: ' + switchError.message);
-        return false;
       }
     }
-  }
 
-  // Connect wallet & ensure on Monad Testnet
-  async function connectWallet() {
-    if (!window.ethereum) {
-      alert('MetaMask not detected');
-      return;
-    }
-    try {
-      // Request accounts
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
-
-      // Switch to Monad Testnet
-      const switched = await switchToMonadTestnet();
-      if (!switched) {
-        walletAddressP.textContent = 'Please switch to Monad Testnet';
+    async function connectWallet() {
+      if (!window.ethereum) {
+        alert('MetaMask not detected');
         return;
       }
+      try {
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const switched = await switchToMonadTestnet();
+        if (!switched) {
+          walletAddressP.textContent = 'Please switch to Monad Testnet';
+          return;
+        }
 
-      provider = new ethers.BrowserProvider(window.ethereum);
-      signer = await provider.getSigner();
-      userAddress = await signer.getAddress();
+        provider = new ethers.BrowserProvider(window.ethereum);
+        signer = await provider.getSigner();
+        userAddress = await signer.getAddress();
 
-      walletAddressP.textContent = 'Connected: ' + userAddress;
-      connectBtn.textContent = 'Wallet Connected';
-      connectBtn.disabled = true;
-      disconnectBtn.style.display = 'inline-block';
+        // ✅ Show shortened address (first 5 + last 5)
+        walletAddressP.textContent = 'Connected: ' + userAddress.slice(0, 5) + '...' + userAddress.slice(-5);
+        connectBtn.textContent = 'Wallet Connected';
+        connectBtn.disabled = true;
+        disconnectBtn.style.display = 'inline-block';
 
-      await initContracts();
-    } catch (err) {
-      alert('Wallet connection failed: ' + err.message);
-    }
-  }
-
-  // Disconnect wallet (reset UI and variables)
-  function disconnectWallet() {
-    signer = null;
-    userAddress = null;
-    contracts = [];
-    walletAddressP.textContent = 'Wallet not connected';
-    connectBtn.textContent = 'Connect Wallet';
-    connectBtn.disabled = false;
-    disconnectBtn.style.display = 'none';
-  }
-
-  // Build color picker UI
-  function buildColorPicker() {
-    colorPicker.innerHTML = '';
-    deployedColors.forEach((dc, i) => {
-      const div = document.createElement('div');
-      div.className = 'color-box';
-      div.style.backgroundColor = normalizeColorName(dc.color);
-      div.title = dc.color;
-      if (i === selectedColorIndex) div.classList.add('selected');
-      div.onclick = () => {
-        selectedColorIndex = i;
-        document.querySelectorAll('.color-box').forEach(el => el.classList.remove('selected'));
-        div.classList.add('selected');
-      };
-      colorPicker.appendChild(div);
-    });
-  }
-
-  // Build the 16x16 pixel grid
-  function buildGrid() {
-    grid.innerHTML = '';
-    for (let y = 0; y < 16; y++) {
-      for (let x = 0; x < 16; x++) {
-        const pixel = document.createElement('div');
-        pixel.className = 'pixel';
-        pixel.dataset.x = x;
-        pixel.dataset.y = y;
-        pixel.title = `Pixel (${x}, ${y})`;
-
-        pixel.onclick = async () => {
-          if (!signer) {
-            alert('Please connect wallet first');
-            return;
-          }
-          if (pixel.classList.contains('disabled')) return;
-
-          const contract = contracts[selectedColorIndex];
-
-          // Disable clicking while tx is pending
-          pixel.classList.add('disabled');
-          pixel.style.borderColor = 'yellow';
-
-          try {
-            const tx = await contract.paint(x, y);
-            await tx.wait();
-
-            pixel.style.backgroundColor = normalizeColorName(deployedColors[selectedColorIndex].color);
-            pixel.style.borderColor = '#333';
-          } catch (err) {
-            alert('Transaction failed: ' + (err?.data?.message || err.message));
-            pixel.style.borderColor = '#333';
-          } finally {
-            pixel.classList.remove('disabled');
-          }
-        };
-
-        grid.appendChild(pixel);
+        await initContracts();
+      } catch (err) {
+        alert('Wallet connection failed: ' + err.message);
       }
     }
-  }
 
-  connectBtn.onclick = connectWallet;
-  disconnectBtn.onclick = disconnectWallet;
+    function disconnectWallet() {
+      signer = null;
+      userAddress = null;
+      contracts = [];
+      walletAddressP.textContent = 'Wallet not connected';
+      connectBtn.textContent = 'Connect Wallet';
+      connectBtn.disabled = false;
+      disconnectBtn.style.display = 'none';
+    }
 
-  buildColorPicker();
-  buildGrid();
-</script>
+    function buildColorPicker() {
+      colorPicker.innerHTML = '';
+      deployedColors.forEach((dc, i) => {
+        const div = document.createElement('div');
+        div.className = 'color-box';
+        div.style.backgroundColor = normalizeColorName(dc.color);
+        div.title = dc.color;
+        if (i === selectedColorIndex) div.classList.add('selected');
+        div.onclick = () => {
+          selectedColorIndex = i;
+          document.querySelectorAll('.color-box').forEach(el => el.classList.remove('selected'));
+          div.classList.add('selected');
+        };
+        colorPicker.appendChild(div);
+      });
+    }
+
+    function buildGrid() {
+      grid.innerHTML = '';
+      for (let y = 0; y < 16; y++) {
+        for (let x = 0; x < 16; x++) {
+          const pixel = document.createElement('div');
+          pixel.className = 'pixel';
+          pixel.dataset.x = x;
+          pixel.dataset.y = y;
+          pixel.title = `Pixel (${x}, ${y})`;
+
+          pixel.onclick = async () => {
+            if (!signer) {
+              alert('Please connect wallet first');
+              return;
+            }
+            if (pixel.classList.contains('disabled')) return;
+
+            const contract = contracts[selectedColorIndex];
+            pixel.classList.add('disabled');
+            pixel.style.borderColor = 'yellow';
+
+            try {
+              const tx = await contract.paint(x, y);
+              await tx.wait();
+
+              pixel.style.backgroundColor = normalizeColorName(deployedColors[selectedColorIndex].color);
+              pixel.style.borderColor = '#333';
+            } catch (err) {
+              alert('Transaction failed: ' + (err?.data?.message || err.message));
+              pixel.style.borderColor = '#333';
+            } finally {
+              pixel.classList.remove('disabled');
+            }
+          };
+
+          grid.appendChild(pixel);
+        }
+      }
+    }
+
+    connectBtn.onclick = connectWallet;
+    disconnectBtn.onclick = disconnectWallet;
+
+    buildColorPicker();
+    buildGrid();
+  </script>
 </body>
 </html>
-
