@@ -1,4 +1,593 @@
- pixel.classList.add('pending');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Monad Paint DApp - Mobile Optimized</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Tailwind CSS from CDN for a modern, responsive UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for a dark theme with smooth transitions */
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .pixel-grid {
+            display: grid;
+            grid-template-columns: repeat(16, 1fr);
+            aspect-ratio: 1 / 1;
+        }
+        .color-box.selected {
+            box-shadow: 0 0 0 3px #007bff, 0 0 0 6px rgba(0, 123, 255, 0.5);
+            transform: scale(1.05);
+        }
+        @keyframes pulse-yellow {
+            0% { box-shadow: 0 0 0 0px rgba(255, 255, 0, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 255, 0, 0); }
+            100% { box-shadow: 0 0 0 0px rgba(255, 255, 0, 0); }
+        }
+        .pixel.pending {
+            border-color: yellow !important;
+            animation: pulse-yellow 1s infinite;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 p-4 flex flex-col items-center min-h-screen">
+
+    <div class="max-w-4xl w-full">
+        <!-- Header with Title and Wallet Status -->
+        <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-800 p-6 rounded-2xl shadow-xl border border-slate-700">
+            <div class="text-center md:text-left">
+                <h1 class="text-4xl font-extrabold text-blue-400">Monad Paint 🎨</h1>
+                <p class="text-slate-400 mt-1 text-sm md:text-base">Each Color is a smart contract on the Monad Testnet.</p>
+            </div>
+            
+            <!-- Wallet Status and Buttons -->
+            <div class="flex items-center justify-center md:justify-end gap-3 flex-wrap">
+                <div class="flex items-center gap-2 bg-slate-700 rounded-full px-4 py-2 text-sm font-medium">
+                    <span id="wallet-indicator" class="h-3 w-3 rounded-full bg-red-500 transition-colors"></span>
+                    <span id="wallet-address" class="text-slate-300"></span>
+                </div>
+                <div class="flex gap-2">
+                    <button id="connectBtn" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-full transition-all duration-200 shadow-lg hover:shadow-blue-500/50">
+                        Connect Wallet
+                    </button>
+                    <button id="disconnectBtn" class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-full transition-all duration-200 shadow-lg hover:shadow-red-500/50" style="display: none;">
+                        Disconnect
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="mt-8">
+            <!-- Mobile-friendly Controls Section -->
+            <div class="bg-slate-800 p-6 rounded-2xl shadow-xl border border-slate-700 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+                
+                <div class="flex items-center gap-4">
+                    <div id="selected-color-indicator" class="w-8 h-8 rounded-full border-2 border-slate-400 shadow-inner"></div>
+                    <button id="openColorPickerBtn" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 font-bold rounded-full transition-all duration-200 shadow-lg">
+                        Choose Color
+                    </button>
+                </div>
+            </div>
+
+            <!-- Pixel Grid Section -->
+            <div class="bg-slate-800 p-2 rounded-2xl shadow-xl border border-slate-700">
+                <!-- The grid container, made responsive with CSS -->
+                <div id="grid" class="pixel-grid w-full bg-slate-900 border-2 border-slate-700 rounded-lg overflow-hidden p-0.5">
+                    <!-- Pixels will be injected here by JavaScript -->
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Custom Modal for Notifications and Errors -->
+    <div id="message-modal" class="modal">
+        <div class="bg-slate-800 p-6 rounded-xl shadow-2xl border border-slate-700 max-w-sm w-full text-center">
+            <p id="modal-text" class="text-lg text-white font-medium"></p>
+            <button onclick="closeModal()" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-full transition-all">OK</button>
+        </div>
+    </div>
+
+    <!-- Color Picker Modal -->
+    <div id="color-picker-modal" class="modal">
+        <div class="bg-slate-800 p-6 rounded-xl shadow-2xl border border-slate-700 max-w-2xl w-11/12 md:w-full text-center">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">Select a Color</h2>
+                <button onclick="closeColorPickerModal()" class="text-slate-400 hover:text-white transition-colors duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="color-picker" class="grid grid-cols-6 sm:grid-cols-8 lg:grid-cols-12 gap-3 justify-center">
+                <!-- Color boxes will be injected here by JavaScript -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Ethers.js and Main Application Script -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.2/dist/ethers.umd.min.js"></script>
+    <script>
+        const { ethers } = window.ethers;
+
+        // --- Contract ABI and Addresses ---
+        const paintABI = [
+            {"inputs":[{"internalType":"string","name":"_color","type":"string"}],"stateMutability":"nonpayable","type":"constructor"},
+            {"inputs":[],"name":"color","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"x","type":"uint256"},{"internalType":"uint256","name":"y","type":"uint256"}],"name":"paint","outputs":[],"stateMutability":"nonpayable","type":"function"},
+            {"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"paintedBy","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+            {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"x","type":"uint256"},{"indexed":true,"internalType":"uint256","name":"y","type":"uint256"},{"indexed":true,"internalType":"address","name":"painter","type":"address"}],"name":"PixelPainted","type":"event"}
+        ];
+
+        // This is a generic MultiCall contract ABI
+        const multicallABI = [
+            {
+                "inputs": [
+                    { "components": [
+                        { "internalType": "address", "name": "target", "type": "address" },
+                        { "internalType": "bytes", "name": "callData", "type": "bytes" }
+                    ], "internalType": "struct Multicall.Call[]", "name": "calls", "type": "tuple[]" }
+                ],
+                "name": "aggregate",
+                "outputs": [
+                    { "internalType": "uint256", "name": "blockNumber", "type": "uint256" },
+                    { "internalType": "bytes[]", "name": "returnData", "type": "bytes[]" }
+                ],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }
+        ];
+        
+        // This is a placeholder address for a MultiCall contract.
+        const multicallAddress = "0xcA11bde05977b3631167028862bE2a173976CA11";
+
+        const deployedColors = [
+            {"color":"Red","address":"0x070e17528afE2acd682a6931De8D854c6eB7dfa7"},
+            {"color":"Green","address":"0x58Dd54a5FeCE682eEB4B84710997ca8c9B46f540"},
+            {"color":"Blue","address":"0x0441178a70Fe2069c239536b99dF3c6afc6f1A89"},
+            {"color":"Yellow","address":"0xb40103EC1a134E11870a64d42513eAD2b472298F"},
+            {"color":"Orange","address":"0x3c1F3A870066Ca6993C6b07E4f84681C8Ed872e2"},
+            {"color":"Purple","address":"0xbdf701b59F2C31a8Fb173E1fcEbf5788b8d3641e"},
+            {"color":"Pink","address":"0x7384cdaC4F527a1BFf9E4b5Dd6F7df87D9bE810D"},
+            {"color":"Cyan","address":"0xfc17931CB585BC70310E10AB4E440763149D3F31"},
+            {"color":"Magenta","address":"0xE59e26b791E5eB83e3a8f8F9C74b12bE82Ee9ac8"},
+            {"color":"Lime","address":"0xe227Fd5609901Cf1F29868a0097A675C62C6434c"},
+            {"color":"Teal","address":"0xD0DbD1894d46CED709BD588E0CdA4531f6d21941"},
+            {"color":"Violet","address":"0x19EE964AA291aeD48E948ddA5a49E220C120bD95"},
+            {"color":"Brown","address":"0xE4F0361cEefe0aef3e25c610e11E34838967B3a4"},
+            {"color":"Olive","address":"0x927Db3Bb921a461A3068837156449A664Bf5D01D"},
+            {"color":"Maroon","address":"0xA4ba3Ae88283d1b5bBF70EC6c4cc93E7975c2449"},
+            {"color":"Navy","address":"0x7D252fa221640124D1D075348594689c94f09679"},
+            {"color":"Turquoise","address":"0x0c01F993Ba57eFC0B0867e9Ab4dD7B3462d08763"},
+            {"color":"Gold","address":"0x18D39B0c6B3C14402b4Ab5c712becE7d3186E2f7"},
+            {"color":"Silver","address":"0x73dD70399691411B9C5859ADe9cF4a815E4658B5"},
+            {"color":"Beige","address":"0x240b9ef25fe6e39389aC754E07b21593548b95c6"},
+            {"color":"Salmon","address":"0x14EDA5805c146DcC45D898932f1FCF17Fd23a57c"},
+            {"color":"Coral","address":"0x7D543aeA35aF9125090a1c695b8B12f19DaE216f"},
+            {"color":"Indigo","address":"0x9ce6b77D49E1ed78d731E71380309e9428E33f69"},
+            {"color":"Crimson","address":"0x7F5aeFf9403E1130FCA76A8E40fbdb8A7f25F905"},
+            {"color":"Khaki","address":"0x45D39385440141b10F9C47db1d7E532dbEe5258D"},
+            {"color":"Orchid","address":"0xfD8F8fA38EF8D68f200081331CdD6Ac10B91Af09"},
+            {"color":"Plum","address":"0xfE95944231422305db178622717f8490b75Ff073"},
+            {"color":"Tan","address":"0xfAe2b517941E5A6dD05810861dD86CECc52FBe0b"},
+            {"color":"Mint","address":"0x2EC2A433be855067fB1C4b2E1244a531C4ca1585"},
+            {"color":"Azure","address":"0x351e35725fbaFa2Cd7090f919C3a64e62eaa534D"},
+            {"color":"Lavender","address":"0x6657Fd6f386FD30F945966aCbFc95c181f835612"},
+            {"color":"Periwinkle","address":"0x549F529601083e7BaCcf283D97C5785119353fbd"},
+            {"color":"SeaGreen","address":"0x3A03BBd4a0C0556ff737266234Dac7e91C0f6C18"},
+            {"color":"DarkGreen","address":"0xd5063041A435f53887eAd752d18fE6035BAD33c0"},
+            {"color":"DarkBlue","address":"0x6f3edEE4fBA76Ff6F3E27B1983F8f87f8e8d4371"},
+            {"color":"DarkRed","address":"0x6416cA889D41B6a3E5c3B602300f2f53972800CF"},
+            {"color":"LightBlue","address":"0x057fc1E2e6Feaba38FD0a706b9Fe023fD2709fbB"},
+            {"color":"LightGreen","address":"0x136324a5C344Ba6f1EE3558fD851464438fB2e5C"},
+            {"color":"LightPink","address":"0x0185bDF75618dCcB06948c5B2bBDc10f8E9d2F8C"},
+            {"color":"LightGray","address":"0xeD90E92282B5B8A22423B1A8F9B09f7AAB9d2541"},
+            {"color":"SlateBlue","address":"0xB686C1Dfc166e3F36ECF2C0074A7e5aE244f2489"},
+            {"color":"DeepPink","address":"0xDEd1C084c7962dbE8c303717b7CF01346Dc49e46"},
+            {"color":"Tomato","address":"0x3F14e0B1Eab2254dCFC37FDBA478Cfd9b399c600"},
+            {"color":"Sienna","address":"0x26645FF7dDFf803895A41784A913a58A10af598F"},
+            {"color":"Chartreuse","address":"0xac500AD1c4DfF9065C271FF03aeeD35624E3B70B"},
+            {"color":"FireBrick","address":"0xa82667af217D88866cE4A19DBfdE98897b0A77F8"},
+            {"color":"ForestGreen","address":"0xdeea66B36Ef4d29c2020dcEe1274BD17b5be0090"},
+            {"color":"SteelBlue","address":"0x2164f5a82eEC7A1443EE30503FF50DE41efAa131"},
+            {"color":"RoyalBlue","address":"0x9A3257CbF2eA41CE857AfF7fEABF75dECD26364E"},
+            {"color":"SkyBlue","address":"0x8D763B7607d8091938a8Ab3Ab6364C0E62655474"},
+            {"color":"MidnightBlue","address":"0x461c8fB8eA1e47077342cB63e04D1E16a0B95a5A"},
+            {"color":"DodgerBlue","address":"0x17173436DDA42109AE1eC7a88f4567b03a305Da6"},
+            {"color":"RosyBrown","address":"0x49a32A297d4F5997E368e6f0FB4555b9a5B9408d"},
+            {"color":"PeachPuff","address":"0x8E0Cd9A6dfDeB97ec7B9E75BEA223473DA0F8069"},
+            {"color":"PowderBlue","address":"0x42A3928229D32fdEfb5DFAe493FeB88a86F9BaD5"},
+            {"color":"LawnGreen","address":"0x46dDe0dAE2c192E6e4C359f24ADcA2aE2F758b83"},
+            {"color":"SpringGreen","address":"0x503Ca3375f7Cf5a0DC42d0eeA58473edce6FEc73"},
+            {"color":"DarkSlateBlue","address":"0x9E5fCb7D3F2Fa7dc58CB59329894BA4F90e11763"},
+            {"color":"IndianRed","address":"0x482CFe2021bCcb5344d755a9a49257017fa3a197"},
+            {"color":"LemonChiffon","address":"0xDd5c3c91F987f56e99B595F88cCE323dD9e45875"},
+            {"color":"DarkOrange","address":"0x3fD90714363FED666CE5E0F1fDf731465D55ff07"},
+            {"color":"MediumPurple","address":"0x32a517BE84f98F3eE9c095415802C29229e25D88"},
+            {"color":"MediumSeaGreen","address":"0x4dd076f1A0b5B3458FE22BaEA58473edce6FEc73"},
+            {"color":"MediumSlateBlue","address":"0x3d541C47af9E6191f31a49aC965E42cFbF29A92a"},
+            {"color":"MediumSpringGreen","address":"0x7CBE57ddf5FD1e61BE609c6c9c0825b482d6c703"},
+            {"color":"MediumTurquoise","address":"0x0Cde390f05D08846aa996D409A6aFE5598620b72"},
+            {"color":"MediumVioletRed","address":"0xe0dBE89d429B4995A1842C49720FFCDb4f616F06"},
+            {"color":"Moccasin","address":"0x437C9C1b93c35979598A5baC4d7ADE3c63772cf2"},
+            {"color":"OldLace","address":"0x6e11DC45dC4b5693C49d304c536F587ac98a9bd0"},
+            {"color":"OrangeRed","address":"0x306925fF84966C92A75fd8733fDAaF299d34848a"},
+            {"color":"PapayaWhip","address":"0xd16bd8D8e8F47F8baEA4FCf2B2F55B9A2C84B7b9"},
+            {"color":"PaleGreen","address":"0x668e7149D44774E172460691c97c2140d776D005"},
+            {"color":"PaleTurquoise","address":"0xab4D0af8725986A6d868Deccecc3d06D802dD5e5"},
+            {"color":"PaleVioletRed","address":"0xd514055Ce5b18Fbe6E9a10EC4E6114c54C367a64"},
+            {"color":"RebeccaPurple","address":"0xF4b637d886938cf08AC0f5Ad9ca053488f8E86aC"},
+            {"color":"SandyBrown","address":"0x1a79a2B282aFdD43DC1198d6180f58E0DA5a4159"},
+            {"color":"SlateGray","address":"0x081378E4CF64306105D17f1cdADbb72cA01D0167"},
+            {"color":"Snow","address":"0x19D27934df1227580f0f909887c28B39ca430D27"},
+            {"color":"Thistle","address":"0x59f4EbF3f36b8C1Dd5ff27789eE64E703c89c5cE"},
+            {"color":"Wheat","address":"0xa50e44165a88F96dac7Be738a2203C4bA203b499"},
+            {"color":"BurlyWood","address":"0x61F464892D98a17B19b3Bb25561321dedCA2EE8B"},
+            {"color":"CadetBlue","address":"0xAb76a615C9F31767fEa4a60e810D7fBd64f25645"},
+            {"color":"Chocolate","address":"0xAF9702AD309B8537A62b5915d1A88efA101bb355"},
+            {"color":"CornflowerBlue","address":"0x337fbF058C5D2167a1825187608E996681d0cE14"},
+            {"color":"DarkCyan","address":"0x2218f154d1d314ACf582f63cE4c6c6f87f6c6A95"},
+            {"color":"DarkGoldenrod","address":"0x5bc4AabF633Dc1BCF039911a9e8Cc4B87fF5E71a"},
+            {"color":"DarkKhaki","address":"0x0e088458dFC57fd36Ef92fc538e6eb96b146cb84"},
+            {"color":"DarkMagenta","address":"0xb4e164754c0816a16FBB225a2F972992D29B0f27"},
+            {"color":"DarkOliveGreen","address":"0xdbfD305998c5EC8A76e08611808F46fe9470EE2A"},
+            {"color":"DarkOrchid","address":"0x6DB5e41DeD2E0D8dF590EAD44c80820314521c35"},
+            {"color":"DarkSalmon","address":"0x98dBA16a08A687b582a7a1700FFe906D7aDb4c69"},
+            {"color":"DarkSeaGreen","address":"0x70CdB458b65A7cc9beCD69E928BA5326CBe8C5eD"},
+            {"color":"DarkSlateGray","address":"0x6d4ae0DaBbB4802fDD046b3e802899D8D03EFD69"},
+            {"color":"DarkTurquoise","address":"0x4021C3A446d71db5e38FE1A9891a92b59A278a8C"},
+            {"color":"DarkViolet","address":"0xB4D8aa2dBD48Cf7E5A395f8e3332db45620B91b6"},
+            {"color":"DimGray","address":"0x3AEa8C7b2Ce69ea7C4fC16326868A2C4EDc306EE"},
+            {"color":"FloralWhite","address":"0xC3816a7A3ED387D6c024b98DC648Fc38b2F7d481"},
+            {"color":"Gainsboro","address":"0x566cd244Eb9be7C4961E10266BFd6adb296B8F2a"},
+            {"color":"GhostWhite","address":"0xF2B4acd08574cFBD62c19eeCb5E45E3Bdc7cEC75"},
+            {"color":"HoneyDew","address":"0x8086Aa5cF1D6f448f36bcC01C32Cf402E6190dc0"}
+        ];
+
+        // --- State Variables ---
+        let provider;
+        let signer;
+        let userAddress = null;
+        let selectedColorIndex = 0;
+        let contracts = [];
+        let multicallContract;
+        const pixels = new Map(); // Store pixels for easy access
+        const eventListeners = new Map(); // Store event listeners to clean up on disconnect
+
+        // --- DOM Elements ---
+        const gridEl = document.getElementById('grid');
+        const colorPickerModalEl = document.getElementById('color-picker-modal');
+        const colorPickerEl = document.getElementById('color-picker');
+        const openColorPickerBtn = document.getElementById('openColorPickerBtn');
+        const selectedColorIndicatorEl = document.getElementById('selected-color-indicator');
+        const walletAddressEl = document.getElementById('wallet-address');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const walletIndicatorEl = document.getElementById('wallet-indicator');
+        const messageModalEl = document.getElementById('message-modal');
+        const modalTextEl = document.getElementById('modal-text');
+
+        // --- Helper Functions ---
+        const normalizeColorName = (name) => name.toLowerCase().replace(/\s+/g, '');
+        
+        const shortenAddress = (address) => `${address.slice(0, 6)}...${address.slice(-4)}`;
+
+        function showMessage(message) {
+            modalTextEl.textContent = message;
+            messageModalEl.style.display = 'flex';
+        }
+
+        function closeModal() {
+            messageModalEl.style.display = 'none';
+        }
+
+        function openColorPickerModal() {
+            colorPickerModalEl.style.display = 'flex';
+            // Ensure the correct color is selected when the modal opens
+            updateSelectedColorUI();
+        }
+
+        function closeColorPickerModal() {
+            colorPickerModalEl.style.display = 'none';
+        }
+
+        // --- Core Logic Functions ---
+        /**
+         * Initializes and connects all contracts to the current signer.
+         * Sets up the MultiCall contract and listens for events.
+         */
+        async function initContracts() {
+            // Instantiate all the individual paint contracts with the signer
+            contracts = deployedColors.map(dc => new ethers.Contract(dc.address, paintABI, signer));
+
+            // Instantiate the MultiCall contract
+            multicallContract = new ethers.Contract(multicallAddress, multicallABI, provider);
+
+            // Add event listeners for real-time updates
+            listenForEvents();
+
+            await renderGridState();
+        }
+
+        /**
+         * Adds a PixelPainted event listener to each contract.
+         * This allows the grid to update in real-time when any user paints a pixel.
+         */
+        function listenForEvents() {
+            contracts.forEach((contract, colorIndex) => {
+                const listener = (x, y, painter) => {
+                    updatePixel(x, y, colorIndex, painter);
+                };
+                contract.on("PixelPainted", listener);
+                eventListeners.set(contract.address, listener); // Store the listener to remove it later
+            });
+        }
+        
+        /**
+         * Removes all event listeners.
+         * This is important to prevent memory leaks when disconnecting the wallet.
+         */
+        function removeListeners() {
+            contracts.forEach(contract => {
+                const listener = eventListeners.get(contract.address);
+                if (listener) {
+                    contract.off("PixelPainted", listener);
+                }
+            });
+            eventListeners.clear();
+        }
+
+        async function switchToMonadTestnet() {
+            const chainIdHex = '0x279f'; // Monad Testnet
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: chainIdHex }]
+                });
+                return true;
+            } catch (switchError) {
+                if (switchError.code === 4902) {
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: chainIdHex,
+                                chainName: 'Monad Testnet',
+                                nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
+                                rpcUrls: ['https://testnet-rpc.monad.xyz'],
+                                blockExplorerUrls: ['https://testnet.monadexplorer.com']
+                            }]
+                        });
+                        return true;
+                    } catch (addError) {
+                        console.error('Failed to add Monad Testnet:', addError);
+                        showMessage(`Failed to add Monad Testnet: ${addError.message}`);
+                        return false;
+                    }
+                }
+                console.error('Failed to switch network:', switchError);
+                showMessage(`Failed to switch to Monad Testnet: ${switchError.message}`);
+                return false;
+            }
+        }
+
+        async function connectWallet() {
+            if (!window.ethereum) {
+                console.error('MetaMask or a similar wallet extension is not detected.');
+                showMessage('MetaMask or a similar wallet extension is not detected. Please install one to use this DApp.');
+                return;
+            }
+            try {
+                // Request accounts from the wallet
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                const switched = await switchToMonadTestnet();
+                if (!switched) {
+                    return;
+                }
+
+                // Create a BrowserProvider from the wallet's window.ethereum object.
+                // This is the correct way to connect to a user's wallet with ethers v6.
+                provider = new ethers.BrowserProvider(window.ethereum);
+                signer = await provider.getSigner();
+                userAddress = await signer.getAddress();
+                
+                updateWalletUI(true);
+                await initContracts();
+            } catch (err) {
+                console.error('Wallet connection failed:', err);
+                // Display the specific error message from the provider for better debugging.
+                showMessage(`Wallet connection failed: ${err.message || err.toString()}`);
+            }
+        }
+        
+        function disconnectWallet() {
+            signer = null;
+            userAddress = null;
+            contracts = [];
+            multicallContract = null;
+            updateWalletUI(false);
+            removeListeners(); // Clean up listeners
+            // Reset grid to default state
+            document.querySelectorAll('.pixel').forEach(p => {
+                p.style.backgroundColor = 'transparent';
+                p.title = `Pixel (${p.dataset.x}, ${p.dataset.y})`;
+            });
+        }
+        
+        // --- UI Rendering Functions ---
+        function updateWalletUI(isConnected) {
+            if (isConnected) {
+                walletAddressEl.textContent = shortenAddress(userAddress);
+                walletIndicatorEl.classList.add('bg-green-500');
+                walletIndicatorEl.classList.remove('bg-red-500');
+                connectBtn.style.display = 'none';
+                disconnectBtn.style.display = 'block';
+            } else {
+                walletAddressEl.textContent = '';
+                walletIndicatorEl.classList.remove('bg-green-500');
+                walletIndicatorEl.classList.add('bg-red-500');
+                connectBtn.style.display = 'block';
+                disconnectBtn.style.display = 'none';
+            }
+        }
+
+        /**
+         * Updates the UI to show the currently selected color.
+         * This includes the color indicator on the main page and the highlight in the modal.
+         */
+        function updateSelectedColorUI() {
+            const selectedColorName = deployedColors[selectedColorIndex].color;
+            const normalizedColor = normalizeColorName(selectedColorName);
+            selectedColorIndicatorEl.style.backgroundColor = normalizedColor;
+
+            document.querySelectorAll('.color-box').forEach((el, i) => {
+                el.classList.toggle('selected', i === selectedColorIndex);
+            });
+        }
+
+        function buildColorPicker() {
+            colorPickerEl.innerHTML = '';
+            deployedColors.forEach((dc, i) => {
+                const div = document.createElement('div');
+                div.className = 'color-box w-full aspect-square rounded-full cursor-pointer transition-all duration-200 border-2 border-transparent hover:border-blue-400';
+                div.style.backgroundColor = normalizeColorName(dc.color);
+                div.title = dc.color;
+                div.onclick = () => {
+                    selectedColorIndex = i;
+                    updateSelectedColorUI();
+                    closeColorPickerModal();
+                };
+                colorPickerEl.appendChild(div);
+            });
+            updateSelectedColorUI(); // Set initial color
+        }
+
+        function buildGrid() {
+            gridEl.innerHTML = '';
+            for (let y = 0; y < 16; y++) {
+                for (let x = 0; x < 16; x++) {
+                    const pixel = document.createElement('div');
+                    pixel.className = 'pixel w-full aspect-square bg-slate-900 border border-slate-700 cursor-pointer transition-colors duration-200';
+                    pixel.dataset.x = x;
+                    pixel.dataset.y = y;
+                    pixel.title = `Pixel (${x}, ${y})`;
+                    pixel.onclick = () => handlePixelClick(pixel, x, y);
+                    gridEl.appendChild(pixel);
+                    pixels.set(`${x}-${y}`, pixel); // Store pixel for direct access
+                }
+            }
+        }
+        
+        /**
+         * Updates a single pixel's color and title based on the state.
+         */
+        function updatePixel(x, y, colorIndex, painter) {
+            const pixelEl = pixels.get(`${x}-${y}`);
+            if (pixelEl) {
+                const colorName = deployedColors[colorIndex].color;
+                pixelEl.style.backgroundColor = normalizeColorName(colorName);
+                pixelEl.title = `${colorName} by ${shortenAddress(painter)}`;
+                pixelEl.classList.remove('pending');
+            }
+        }
+
+        /**
+         * Renders the entire grid state efficiently using a MultiCall contract.
+         * This significantly reduces network requests from thousands to just one.
+         */
+        async function renderGridState() {
+            if (!provider || !multicallContract) {
+                console.error("Provider or MultiCall contract not initialized.");
+                return;
+            }
+
+            const calls = [];
+            const pixelElements = document.querySelectorAll('.pixel');
+
+            // Create an array of all contract calls to be bundled
+            pixelElements.forEach(pixelEl => {
+                const x = parseInt(pixelEl.dataset.x);
+                const y = parseInt(pixelEl.dataset.y);
+                deployedColors.forEach(dc => {
+                    const contractInterface = new ethers.Interface(paintABI);
+                    const callData = contractInterface.encodeFunctionData("paintedBy", [x, y]);
+                    calls.push({ target: dc.address, callData: callData });
+                });
+            });
+
+            try {
+                // Execute all calls in a single network request
+                const [, returnData] = await multicallContract.aggregate.staticCall(calls);
+
+                // Decode the results and update the grid
+                let callIndex = 0;
+                const paintedPixels = new Map(); // Keep track of the most recently painted color for each pixel
+
+                for (let y = 0; y < 16; y++) {
+                    for (let x = 0; x < 16; x++) {
+                        for (let c = 0; c < deployedColors.length; c++) {
+                            const result = returnData[callIndex];
+                            if (result !== "0x") {
+                                const decoded = ethers.AbiCoder.defaultAbiCoder().decode(["address"], result);
+                                const paintedBy = decoded[0];
+                                if (paintedBy !== ethers.ZeroAddress) {
+                                    paintedPixels.set(`${x}-${y}`, {
+                                        colorIndex: c,
+                                        paintedBy: paintedBy
+                                    });
+                                }
+                            }
+                            callIndex++;
+                        }
+                    }
+                }
+
+                // Update the UI with the latest state
+                for (const [key, value] of paintedPixels.entries()) {
+                    const [x, y] = key.split('-').map(Number);
+                    updatePixel(x, y, value.colorIndex, value.paintedBy);
+                }
+
+            } catch (err) {
+                console.error('Failed to fetch grid state with MultiCall:', err);
+                showMessage(`Failed to load grid state. Please try refreshing. Error: ${err.message}`);
+            }
+        }
+
+        async function handlePixelClick(pixel, x, y) {
+            if (!signer) {
+                showMessage('Please connect your wallet first.');
+                return;
+            }
+            
+            if (pixel.classList.contains('pending')) {
+                showMessage('A transaction is already in progress for this pixel.');
+                return;
+            }
+
+            const contract = contracts[selectedColorIndex];
+            if (!contract) {
+                showMessage('Contracts are not initialized. Please connect your wallet again.');
+                return;
+            }
+
+            // Optimistic UI update: immediately change the color and show a pending state
+            pixel.classList.add('pending');
             const colorName = deployedColors[selectedColorIndex].color;
             const originalColor = pixel.style.backgroundColor;
             pixel.style.backgroundColor = normalizeColorName(colorName);
