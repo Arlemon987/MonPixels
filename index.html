@@ -100,8 +100,9 @@
     }
   ]
 
+
   // Your 100 deployed color contracts (truncated here for brevity, replace with your full list)
-  const deployedColors = [[
+  const deployedColors = [
     {"color":"Red","address":"0x070e17528afE2acd682a6931De8D854c6eB7dfa7"},
     {"color":"Green","address":"0x58Dd54a5FeCE682eEB4B84710997ca8c9B46f540"},
     {"color":"Blue","address":"0x0441178a70Fe2069c239536b99dF3c6afc6f1A89"},
@@ -209,14 +210,6 @@
     return name.toLowerCase();
   }
 
-  // ----------- UPGRADED SECTION START -----------
-  // Format wallet address to show first 6 and last 6 characters
-  function formatAddress(address) {
-    if (!address || address.length <= 12) return address;
-    return address.slice(0, 6) + '...' + address.slice(-6);
-  }
-  // ----------- UPGRADED SECTION END -------------
-
   let provider;
   let signer;
   let userAddress = null;
@@ -293,10 +286,7 @@
       signer = await provider.getSigner();
       userAddress = await signer.getAddress();
 
-      // ----------- UPGRADED SECTION START -----------
-      walletAddressP.textContent = 'Connected: ' + formatAddress(userAddress);
-      // ----------- UPGRADED SECTION END -------------
-
+      walletAddressP.textContent = 'Connected: ' + userAddress;
       connectBtn.textContent = 'Wallet Connected';
       connectBtn.disabled = true;
       disconnectBtn.style.display = 'inline-block';
@@ -387,3 +377,4 @@
 </script>
 </body>
 </html>
+
