@@ -1,5 +1,6 @@
-<P>Each color you paint it will interact with a unique contract.</P>
-<p>100 COLORS = 100 CCONTRACTS</p>
+
+Each color you paint it will interact with a unique contract.
+100 COLORS = 100 CCONTRACTS
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -49,29 +50,10 @@
       border: 1px solid #333;
       cursor: pointer;
       user-select: none;
-      transition: background 0.2s;
     }
     .pixel.disabled {
       cursor: not-allowed;
       opacity: 0.6;
-    }
-    #popup {
-      display: none;
-      position: fixed;
-      left: 50%;
-      top: 20px;
-      transform: translateX(-50%);
-      background: #222;
-      color: #fff;
-      padding: 16px 32px;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px #0009;
-      z-index: 9999;
-      font-size: 18px;
-      min-width: 200px;
-      max-width: 90vw;
-      text-align: center;
-      pointer-events: none;
     }
   </style>
 </head>
@@ -87,43 +69,38 @@
   <h3>16 × 16 Pixel Grid</h3>
   <div id="grid"></div>
 
-  <div id="popup"></div>
-
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.2/dist/ethers.umd.min.js"></script>
   <script>
     const { ethers } = window.ethers;
 
-    const paintABI = [
-      {
-        "inputs": [{"internalType":"string","name":"_color","type":"string"}],
-        "stateMutability":"nonpayable",
-        "type":"constructor"
-      },
-      {
-        "inputs":[],
-        "name":"color",
-        "outputs":[{"internalType":"string","name":"","type":"string"}],
-        "stateMutability":"view",
-        "type":"function"
-      },
-      {
-        "inputs":[{"internalType":"uint256","name":"x","type":"uint256"},{"internalType":"uint256","name":"y","type":"uint256"}],
-        "name":"paint",
-        "outputs":[],
-        "stateMutability":"nonpayable",
-        "type":"function"
-      },
-      {
-        "inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],
-        "name":"paintedBy",
-        "outputs":[{"internalType":"address","name":"","type":"address"}],
-        "stateMutability":"view",
-        "type":"function"
-      }
-    ];
-
-    // --- Your deployedColors array goes here ---
-    // For brevity, only the start and end are shown, but use your full array.
+    const paintABI =  [
+    {
+      "inputs": [{"internalType":"string","name":"_color","type":"string"}],
+      "stateMutability":"nonpayable",
+      "type":"constructor"
+    },
+    {
+      "inputs":[],
+      "name":"color",
+      "outputs":[{"internalType":"string","name":"","type":"string"}],
+      "stateMutability":"view",
+      "type":"function"
+    },
+    {
+      "inputs":[{"internalType":"uint256","name":"x","type":"uint256"},{"internalType":"uint256","name":"y","type":"uint256"}],
+      "name":"paint",
+      "outputs":[],
+      "stateMutability":"nonpayable",
+      "type":"function"
+    },
+    {
+      "inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],
+      "name":"paintedBy",
+      "outputs":[{"internalType":"address","name":"","type":"address"}],
+      "stateMutability":"view",
+      "type":"function"
+    }
+  ];
     const deployedColors = [
     {"color":"Red","address":"0x070e17528afE2acd682a6931De8D854c6eB7dfa7"},
     {"color":"Green","address":"0x58Dd54a5FeCE682eEB4B84710997ca8c9B46f540"},
@@ -243,21 +220,8 @@
     const connectBtn = document.getElementById('connectBtn');
     const disconnectBtn = document.getElementById('disconnectBtn');
 
-    // --- Popup helpers ---
-    function showPopup(msg, timeout = 2500) {
-      const popup = document.getElementById('popup');
-      popup.textContent = msg;
-      popup.style.display = 'block';
-      if (timeout > 0) {
-        setTimeout(() => { popup.style.display = 'none'; }, timeout);
-      }
-    }
-    function hidePopup() {
-      document.getElementById('popup').style.display = 'none';
-    }
-
     async function initContracts() {
-      contracts = deployedColors.map(dc => new ethers.Contract(dc.address, paintABI, signer ?? provider));
+      contracts = deployedColors.map(dc => new ethers.Contract(dc.address, paintABI, signer));
     }
 
     async function switchToMonadTestnet() {
@@ -283,11 +247,11 @@
             });
             return true;
           } catch (addError) {
-            showPopup('Failed to add Monad Testnet: ' + addError.message, 3500);
+            alert('Failed to add Monad Testnet: ' + addError.message);
             return false;
           }
         } else {
-          showPopup('Failed to switch network: ' + switchError.message, 3500);
+          alert('Failed to switch network: ' + switchError.message);
           return false;
         }
       }
@@ -295,7 +259,7 @@
 
     async function connectWallet() {
       if (!window.ethereum) {
-        showPopup('MetaMask not detected', 2500);
+        alert('MetaMask not detected');
         return;
       }
       try {
@@ -310,15 +274,15 @@
         signer = await provider.getSigner();
         userAddress = await signer.getAddress();
 
+        // ✅ Show shortened address (first 5 + last 5)
         walletAddressP.textContent = 'Connected: ' + userAddress.slice(0, 5) + '...' + userAddress.slice(-5);
         connectBtn.textContent = 'Wallet Connected';
         connectBtn.disabled = true;
         disconnectBtn.style.display = 'inline-block';
 
         await initContracts();
-        await loadPaintedPixels();
       } catch (err) {
-        showPopup('Wallet connection failed: ' + err.message, 3500);
+        alert('Wallet connection failed: ' + err.message);
       }
     }
 
@@ -330,7 +294,6 @@
       connectBtn.textContent = 'Connect Wallet';
       connectBtn.disabled = false;
       disconnectBtn.style.display = 'none';
-      buildGrid(); // reset grid
     }
 
     function buildColorPicker() {
@@ -358,11 +321,11 @@
           pixel.className = 'pixel';
           pixel.dataset.x = x;
           pixel.dataset.y = y;
-          pixel.id = `pixel-${x}-${y}`;
           pixel.title = `Pixel (${x}, ${y})`;
+
           pixel.onclick = async () => {
             if (!signer) {
-              showPopup('Please connect wallet first!', 2000);
+              alert('Please connect wallet first');
               return;
             }
             if (pixel.classList.contains('disabled')) return;
@@ -370,56 +333,23 @@
             const contract = contracts[selectedColorIndex];
             pixel.classList.add('disabled');
             pixel.style.borderColor = 'yellow';
-            showPopup('Waiting for transaction confirmation...', 0); // No timeout: stays until next action
 
             try {
               const tx = await contract.paint(x, y);
-              showPopup('Transaction sent! Waiting for confirmation...', 0);
               await tx.wait();
+
               pixel.style.backgroundColor = normalizeColorName(deployedColors[selectedColorIndex].color);
               pixel.style.borderColor = '#333';
-              showPopup('✅ Pixel colored successfully!', 2000);
             } catch (err) {
+              alert('Transaction failed: ' + (err?.data?.message || err.message));
               pixel.style.borderColor = '#333';
-              showPopup('❌ Transaction failed: ' + (err?.data?.message || err.message), 3500);
             } finally {
               pixel.classList.remove('disabled');
-              setTimeout(hidePopup, 2500);
             }
           };
+
           grid.appendChild(pixel);
         }
-      }
-    }
-
-    // Helper: Get painted color index for a pixel (parallel)
-    async function getPaintedColorIndex(x, y) {
-      const results = await Promise.all(
-        contracts.map(c =>
-          c.paintedBy(x, y).catch(() => "0x0000000000000000000000000000000000000000")
-        )
-      );
-      const idx = results.findIndex(addr => addr !== "0x0000000000000000000000000000000000000000");
-      return idx !== -1 ? idx : null;
-    }
-
-    // Load all pixels with batch requests (row by row for UI responsiveness)
-    async function loadPaintedPixels() {
-      if (!contracts.length) return;
-      for (let y = 0; y < 16; y++) {
-        await Promise.all(
-          Array.from({length: 16}, (_, x) => (async () => {
-            const idx = await getPaintedColorIndex(x, y);
-            const pixelDiv = document.getElementById(`pixel-${x}-${y}`);
-            if (pixelDiv) {
-              if (idx !== null) {
-                pixelDiv.style.backgroundColor = normalizeColorName(deployedColors[idx].color);
-              } else {
-                pixelDiv.style.backgroundColor = "#222";
-              }
-            }
-          })())
-        );
       }
     }
 
@@ -428,14 +358,6 @@
 
     buildColorPicker();
     buildGrid();
-
-    window.onload = async () => {
-      provider = new ethers.JsonRpcProvider("https://testnet-rpc.monad.xyz");
-      await initContracts();
-      buildColorPicker();
-      buildGrid();
-      await loadPaintedPixels();
-    };
   </script>
 </body>
 </html>
